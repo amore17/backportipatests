@@ -545,3 +545,67 @@ def update_jira_issue(
 
 def browse_url(base_url: str, issue_key: str) -> str:
     return f"{base_url.rstrip('/')}/browse/{issue_key}"
+
+
+def add_jira_comment(
+    *,
+    issue_key: str,
+    body_plain: str,
+    base_url: str | None = None,
+    email: str | None = None,
+    api_token: str | None = None,
+    timeout: int = 120,
+) -> dict:
+    """POST a comment on an issue (API v3 ADF body; v2 plain string fallback)."""
+    base, user, token = jira_credentials(
+        base_url=base_url, email=email, api_token=api_token
+    )
+    auth = base64.b64encode(f"{user}:{token}".encode()).decode()
+    key = issue_key.strip().upper()
+    root = base.rstrip("/")
+
+    body_v3 = json.dumps({"body": plain_text_to_adf(body_plain)}).encode("utf-8")
+    req_v3 = urllib.request.Request(
+        f"{root}/rest/api/3/issue/{key}/comment",
+        data=body_v3,
+        headers={
+            "Authorization": f"Basic {auth}",
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "User-Agent": "backportipatests/0.1",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req_v3, timeout=timeout) as resp:
+            raw = resp.read().decode("utf-8", errors="replace")
+            return json.loads(raw) if raw.strip() else {}
+    except urllib.error.HTTPError as e_v3:
+        err_body = e_v3.read().decode("utf-8", errors="replace")
+        if e_v3.code not in (400, 415):
+            raise RuntimeError(
+                f"Jira comment (v3) HTTP {e_v3.code}: {err_body}"
+            ) from e_v3
+
+    body_v2 = json.dumps({"body": body_plain}).encode("utf-8")
+    req_v2 = urllib.request.Request(
+        f"{root}/rest/api/2/issue/{key}/comment",
+        data=body_v2,
+        headers={
+            "Authorization": f"Basic {auth}",
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "User-Agent": "backportipatests/0.1",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req_v2, timeout=timeout) as resp:
+            raw = resp.read().decode("utf-8", errors="replace")
+            return json.loads(raw) if raw.strip() else {}
+    except urllib.error.HTTPError as e_v2:
+        err = e_v2.read().decode("utf-8", errors="replace")
+        raise RuntimeError(
+            f"Jira comment failed. v3 error body: {err_body!r}; "
+            f"v2 HTTP {e_v2.code}: {err}"
+        ) from e_v2

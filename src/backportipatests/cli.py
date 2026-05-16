@@ -24,6 +24,7 @@ from backportipatests.repodata import (
     parse_spec_version,
 )
 from backportipatests.jira_create import browse_url, create_jira_issue, update_jira_issue
+from backportipatests.jira_existing import maybe_comment_on_existing_open_bug
 from backportipatests.jira_fetch import fetch_jira_issue_description, jira_credentials
 from backportipatests.jira_spec import (
     DEFAULT_ASSIGNED_TEAM_VALUE,
@@ -351,24 +352,40 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.create_jira_issue:
         base, _, _ = jira_credentials()
-        extra = jira_create_additional_fields(
+        affects_ver = coerce_jira_affects_version_display_name(
             prod_major=prod_major,
             prod_minor=prod_minor,
             track=args.track,
-            assigned_team=args.jira_assigned_team,
             affects_version=args.jira_affects_version,
-            include_affects_versions=not args.jira_no_affects_version,
         )
-        created = create_jira_issue(
-            description_plain=report_text,
-            summary=jira_summary_line(prod_major=prod_major, prod_minor=prod_minor),
+        existing_key = maybe_comment_on_existing_open_bug(
             project_key=args.jira_project_key,
-            issue_type=args.jira_issue_type,
-            components_csv=args.jira_component,
-            extra_fields=extra,
+            affects_version_name=affects_ver,
+            component=args.jira_component,
+            scan_meta_lines=scan_meta_lines,
+            rows=rows,
         )
-        key = created.get("key", "?")
-        print(f"Created Jira issue {key}: {browse_url(base, key)}")
+        if existing_key is None:
+            extra = jira_create_additional_fields(
+                prod_major=prod_major,
+                prod_minor=prod_minor,
+                track=args.track,
+                assigned_team=args.jira_assigned_team,
+                affects_version=args.jira_affects_version,
+                include_affects_versions=not args.jira_no_affects_version,
+            )
+            created = create_jira_issue(
+                description_plain=report_text,
+                summary=jira_summary_line(
+                    prod_major=prod_major, prod_minor=prod_minor
+                ),
+                project_key=args.jira_project_key,
+                issue_type=args.jira_issue_type,
+                components_csv=args.jira_component,
+                extra_fields=extra,
+            )
+            key = created.get("key", "?")
+            print(f"Created Jira issue {key}: {browse_url(base, key)}")
     elif args.jira_update_issue is not None:
         base, _, _ = jira_credentials()
         extra = jira_create_additional_fields(

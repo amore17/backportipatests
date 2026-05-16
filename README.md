@@ -187,10 +187,11 @@ With **`JIRA_EMAIL`** and **`JIRA_API_TOKEN`** set (optional **`JIRA_URL`**, def
 ```bash
 export JIRA_EMAIL='you@redhat.com'
 export JIRA_API_TOKEN='...'
-backport-ipa-tests --rhel-version 10.2 --major 10 --track zstream \
-  --since-days 60 --output /tmp/list --create-jira-issue
+backport-ipa-tests --rhel-version 10.2 --major 10 --track zstream --since-days 60 --output /tmp/list --create-jira-issue
 ```
 
 Uses **`--jira-project-key`** (default `RHEL`), **`--jira-issue-type`** (default `Bug`), **`--jira-component`**, **`--jira-assigned-team`**, and default **Affects versions** from **`--track`**. The API v3 body uses ADF for the description; v2 string description is tried if v3 rejects the payload.
+
+Before creating, the tool searches for an **open** bug whose summary contains **`python3-ipatests`**, **Components** is **`ipa`** (or **`--jira-component`**), status is **New**, **Planning**, **In Progress**, or **Integration**, and the RHEL version matches (Affected version/s, Fix version/s, or Target RHEL Version). If one exists, **no new issue is created**. When **Fixed in Build** is empty on that issue, a **comment** is added with compose metadata and any commits from this scan not already listed in the description or prior comments.
 
 Environment for optional Jira REST (if not using Cursor MCP): `JIRA_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN` — also used by **`--merge-with-jira-issue`** and **`--create-jira-issue`**.

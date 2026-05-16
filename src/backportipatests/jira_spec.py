@@ -10,6 +10,17 @@ ASSIGNED_TEAM_FIELD_ID = "customfield_10606"
 DEFAULT_JIRA_COMPONENT = "ipa"
 DEFAULT_ASSIGNED_TEAM_VALUE = "rhel-idm-ipa"
 
+# RHEL Jira — Target RHEL Version (used in QE JQL alongside affected/fix versions)
+TARGET_RHEL_VERSION_FIELD_ID = "customfield_10855"
+
+# Active workflow states for open python3-ipatests backport bugs (do not duplicate).
+OPEN_IPATESTS_WORKFLOW_STATUSES: tuple[str, ...] = (
+    "New",
+    "Planning",
+    "In Progress",
+    "Integration",
+)
+
 # Z-stream compose without explicit ".z" in Jira (user override → normalize)
 _RHEL_MINOR_ONLY = re.compile(r"^rhel-(?P<maj>\d+)\.(?P<min>\d+)$")
 
